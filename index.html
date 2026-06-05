@@ -100,7 +100,7 @@ function avg(arr) { return arr.reduce((a,b) => a+b, 0) / arr.length; }`,
             document.getElementById('runBtn').textContent = 'Cargando...';
 
             // CAMBIA ESTA URL por tu API de Render
-            const API_URL = 'https://tu-api-render.onrender.com/backtest';
+            const API_URL = 'https://tradelab-mvp.onrender.com/backtest';
 
             try {
                 const res = await fetch(API_URL, {
