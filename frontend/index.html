@@ -212,7 +212,10 @@
       form.append("ma_slow", maSlow);
 
       try {
-        const res  = await fetch(`${BACKEND}/backtest`, { method: "POST", body: form });
+        const res = await fetch('https://tradelab-mvp.onrender.com/backtest', {
+  method: 'POST',
+  body: form
+});
         const data = await res.json();
 
         if (data.error) return showError(data.error);
