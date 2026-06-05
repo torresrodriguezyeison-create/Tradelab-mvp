@@ -1,4 +1,5 @@
-   fastapi
-   uvicorn
-   pandas
-   python-multipart
+fastapi
+uvicorn
+yfinance
+pandas
+js2py
