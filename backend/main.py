@@ -1,7 +1,9 @@
-from fastapi import FastAPI, File, UploadFile, Form
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+import yfinance as yf
 import pandas as pd
-import io
+import js2py
 
 app = FastAPI()
 
@@ -9,74 +11,81 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*"]
 )
 
+class BacktestRequest(BaseModel):
+    symbol: str
+    code: str
+    timeframe: str = "1d"
 
 @app.post("/backtest")
-async def backtest(
-    file: UploadFile = File(...),
-    capital: float = Form(10000.0),
-    ma_fast: int = Form(10),
-    ma_slow: int = Form(30),
-):
-    if ma_fast >= ma_slow:
-        return {"error": "ma_fast debe ser menor que ma_slow"}
-
-    content = await file.read()
+def run_backtest(req: BacktestRequest):
     try:
-        df = pd.read_csv(io.StringIO(content.decode("utf-8")))
-    except Exception:
-        return {"error": "No se pudo leer el CSV. Verifica el formato."}
+        # 1. Descargar datos: Crypto, Forex, Acciones
+        period = "6mo" if req.timeframe == "1d" else "1mo"
+        df = yf.download(req.symbol, period=period, interval=req.timeframe)
 
-    df.columns = [c.strip().lower() for c in df.columns]
+        if df.empty:
+            return {"error": "No hay datos para ese símbolo"}
 
-    close_col = next((c for c in df.columns if "close" in c), None)
-    if close_col is None:
-        return {"error": "No se encontró columna 'close' en el CSV."}
+        df = df.reset_index()
+        df['Date'] = pd.to_datetime(df['Date'])
 
-    df["close"] = pd.to_numeric(df[close_col], errors="coerce")
-    df = df.dropna(subset=["close"]).reset_index(drop=True)
+        candles = [{
+            "time": int(row.Date.timestamp()),
+            "open": float(row.Open),
+            "high": float(row.High),
+            "low": float(row.Low),
+            "close": float(row.Close)
+        } for _, row in df.iterrows()]
 
-    if len(df) < ma_slow:
-        return {"error": f"El CSV necesita al menos {ma_slow} filas de datos."}
+        # 2. Ejecutar código JS del usuario
+        context = js2py.EvalJs()
+        context.execute(req.code)
 
-    df["ma_fast"] = df["close"].rolling(ma_fast).mean()
-    df["ma_slow"] = df["close"].rolling(ma_slow).mean()
-    df = df.dropna().reset_index(drop=True)
+        signals = []
+        position = 0
+        trades = []
+        entry_price = 0
 
-    balance = capital
-    position = None
-    entry_price = 0.0
-    trades = 0
+        for i in range(len(candles)):
+            signal = context.strategy(candles, i)
 
-    for i in range(1, len(df)):
-        prev_fast = df["ma_fast"].iloc[i - 1]
-        prev_slow = df["ma_slow"].iloc[i - 1]
-        curr_fast = df["ma_fast"].iloc[i]
-        curr_slow = df["ma_slow"].iloc[i]
-        price = df["close"].iloc[i]
+            if signal == 1 and position == 0: # COMPRA
+                signals.append({"time": candles[i]["time"], "signal": 1})
+                entry_price = candles[i]["close"]
+                position = 1
 
-        if prev_fast <= prev_slow and curr_fast > curr_slow:
-            if position is None:
-                position = "long"
-                entry_price = price
+            elif signal == -1 and position == 1: # VENTA
+                signals.append({"time": candles[i]["time"], "signal": -1})
+                profit_pct = (candles[i]["close"] - entry_price) / entry_price * 100
+                trades.append(profit_pct)
+                position = 0
 
-        elif prev_fast >= prev_slow and curr_fast < curr_slow:
-            if position == "long":
-                pnl = (price - entry_price) / entry_price
-                balance *= 1 + pnl
-                position = None
-                trades += 1
+        # 3. Métricas de backtest
+        wins = len([t for t in trades if t > 0])
+        total_trades = len(trades)
+        win_rate = round(wins / total_trades * 100, 1) if total_trades > 0 else 0
+        net_profit = round(sum(trades), 2) if trades else 0
 
-    if position == "long":
-        last_price = df["close"].iloc[-1]
-        pnl = (last_price - entry_price) / entry_price
-        balance *= 1 + pnl
-        trades += 1
+        gross_profit = sum([t for t in trades if t > 0])
+        gross_loss = abs(sum([t for t in trades if t < 0]))
+        profit_factor = round(gross_profit / gross_loss, 2) if gross_loss!= 0 else 0
 
-    return {
-        "profit_pct": round((balance - capital) / capital * 100, 2),
-        "final_capital": round(balance, 2),
-        "trades": trades,
-    }
+        return {
+            "candles": candles[-200:], # Últimas 200 velas para que cargue rápido
+            "signals": signals,
+            "metrics": {
+                "winRate": win_rate,
+                "profitFactor": profit_factor,
+                "totalTrades": total_trades,
+                "netProfit": net_profit
+            }
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/")
+def root():
+    return {"status": "TradeLab Pro v2.0 API Running"}
