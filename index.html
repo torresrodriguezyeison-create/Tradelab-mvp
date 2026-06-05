@@ -1,254 +1,141 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Strategy Tester</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: 'Inter', system-ui, sans-serif;
-      background: #0f1117;
-      color: #e2e8f0;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      padding: 40px 16px;
-    }
-
-    .container { width: 100%; max-width: 560px; }
-
-    .banner {
-      background: rgba(59, 130, 246, 0.08);
-      border: 1px solid rgba(59, 130, 246, 0.25);
-      border-radius: 10px;
-      padding: 14px 18px;
-      margin-bottom: 28px;
-      font-size: 13px;
-      color: #93c5fd;
-      line-height: 1.6;
-    }
-    .banner strong { color: #bfdbfe; display: block; margin-bottom: 2px; }
-
-    h1 { font-size: 22px; font-weight: 700; margin-bottom: 24px; letter-spacing: -0.3px; }
-
-    .field { margin-bottom: 16px; }
-    label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 6px; font-weight: 500; }
-
-    input[type="file"],
-    input[type="number"] {
-      width: 100%;
-      background: #1c1e26;
-      border: 1px solid #2d3148;
-      border-radius: 8px;
-      color: #e2e8f0;
-      padding: 9px 12px;
-      font-size: 14px;
-      outline: none;
-      transition: border-color .2s;
-    }
-    input:focus { border-color: #3b82f6; }
-    input[type="file"] { cursor: pointer; }
-    input[type="file"]::file-selector-button {
-      background: #2d3148;
-      border: none;
-      border-radius: 5px;
-      color: #e2e8f0;
-      padding: 4px 10px;
-      margin-right: 10px;
-      cursor: pointer;
-      font-size: 13px;
-    }
-
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-    button {
-      width: 100%;
-      background: #3b82f6;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 11px;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      margin-top: 8px;
-      transition: background .2s;
-    }
-    button:hover { background: #2563eb; }
-    button:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
-
-    .error {
-      background: rgba(239, 68, 68, 0.1);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      border-radius: 8px;
-      color: #f87171;
-      padding: 12px 16px;
-      font-size: 13px;
-      margin-top: 20px;
-    }
-
-    .results {
-      margin-top: 24px;
-      border: 1px solid #2d3148;
-      border-radius: 10px;
-      overflow: hidden;
-    }
-    .results-header {
-      padding: 10px 16px;
-      border-bottom: 1px solid #2d3148;
-      font-size: 11px;
-      color: #64748b;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: .6px;
-    }
-    .results-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-    }
-    .result-cell {
-      padding: 24px 12px;
-      text-align: center;
-      border-right: 1px solid #2d3148;
-    }
-    .result-cell:last-child { border-right: none; }
-    .result-label {
-      font-size: 11px;
-      color: #64748b;
-      margin-bottom: 8px;
-      font-weight: 500;
-    }
-    .result-value {
-      font-size: 26px;
-      font-weight: 700;
-      font-variant-numeric: tabular-nums;
-    }
-    .positive { color: #34d399; }
-    .negative { color: #f87171; }
-    .neutral  { color: #e2e8f0; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradeLab Pro - Strategy Tester</title>
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="https://unpkg.com/monaco-editor@0.45.0/min/vs/loader.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #131722; color: #d1d4dc; }
+       .header { padding: 12px; background: #1e222d; border-bottom: 1px solid #2a2e39; }
+       .header h1 { font-size: 18px; }
+       .container { display: flex; flex-direction: column; height: calc(100vh - 50px); }
+       .controls { padding: 12px; background: #1e222d; display: flex; gap: 8px; flex-wrap: wrap; }
+        select, button { padding: 8px 12px; background: #2a2e39; color: #d1d4dc; border: 1px solid #363a45; border-radius: 4px; font-size: 14px; }
+        button { background: #2962ff; border: none; font-weight: 600; }
+        button:active { background: #1e4bd8; }
+        #chart { flex: 1; }
+        #editor { height: 200px; border-top: 1px solid #2a2e39; }
+       .metrics { padding: 12px; background: #1e222d; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; font-size: 12px; }
+       .metric { background: #2a2e39; padding: 8px; border-radius: 4px; }
+       .metric-label { color: #868993; }
+       .metric-value { font-size: 16px; font-weight: 600; }
+       .green { color: #26a69a; }.red { color: #ef5350; }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <div class="banner">
-      <strong>Crea tu estrategia con tu IA favorita: ChatGPT, Gemini, Claude.</strong>
-      Luego pégala aquí para testearla con datos reales.
-    </div>
-
-    <h1>Strategy Tester</h1>
-
-    <div class="field">
-      <label>Archivo CSV (OHLC con columna "close")</label>
-      <input type="file" id="csvFile" accept=".csv" />
-    </div>
-
-    <div class="row">
-      <div class="field">
-        <label>MA Rápida (periodo)</label>
-        <input type="number" id="maFast" value="10" min="1" max="200" />
-      </div>
-      <div class="field">
-        <label>MA Lenta (periodo)</label>
-        <input type="number" id="maSlow" value="30" min="2" max="500" />
-      </div>
-    </div>
-
-    <div class="field">
-      <label>Capital inicial (USD)</label>
-      <input type="number" id="capital" value="10000" min="100" step="1000" />
-    </div>
-
-    <button id="runBtn" onclick="runBacktest()">▶ Ejecutar Backtest</button>
-
-    <div id="error" class="error" style="display:none;"></div>
-
-    <div id="results" class="results" style="display:none;">
-      <div class="results-header" id="resultsHeader"></div>
-      <div class="results-grid">
-        <div class="result-cell">
-          <div class="result-label">Ganancia</div>
-          <div class="result-value" id="profitPct"></div>
+    <div class="header"><h1>TradeLab Pro v2.0</h1></div>
+    <div class="container">
+        <div class="controls">
+            <select id="symbol">
+                <option value="BTC-USD">BTC-USD</option>
+                <option value="ETH-USD">ETH-USD</option>
+                <option value="EURUSD=X">EUR/USD</option>
+                <option value="AAPL">AAPL</option>
+                <option value="TSLA">TSLA</option>
+                <option value="SPY">S&P 500</option>
+            </select>
+            <select id="timeframe">
+                <option value="1d">1 Día</option>
+                <option value="1h">1 Hora</option>
+                <option value="15m">15 Min</option>
+            </select>
+            <button id="runBtn">▶ Ejecutar Backtest</button>
         </div>
-        <div class="result-cell">
-          <div class="result-label">Capital final</div>
-          <div class="result-value neutral" id="finalCapital"></div>
-        </div>
-        <div class="result-cell">
-          <div class="result-label">Nº de trades</div>
-          <div class="result-value neutral" id="trades"></div>
-        </div>
-      </div>
+        <div id="chart"></div>
+        <div id="editor"></div>
+        <div class="metrics" id="metrics"></div>
     </div>
-  </div>
 
-  <script>
-    const BACKEND = "http://localhost:8000";
+    <script>
+        // 1. Gráfico TradingView
+        const chart = LightweightCharts.createChart(document.getElementById('chart'), {
+            layout: { background: { color: '#131722' }, textColor: '#d1d4dc' },
+            grid: { vertLines: { color: '#2a2e39' }, horzLines: { color: '#2a2e39' } },
+            width: window.innerWidth,
+            height: window.innerHeight - 350,
+        });
+        const candleSeries = chart.addCandlestickSeries();
 
-    async function runBacktest() {
-      const file    = document.getElementById("csvFile").files[0];
-      const maFast  = parseInt(document.getElementById("maFast").value);
-      const maSlow  = parseInt(document.getElementById("maSlow").value);
-      const capital = parseFloat(document.getElementById("capital").value);
-      const btn     = document.getElementById("runBtn");
-      const errEl   = document.getElementById("error");
-      const resEl   = document.getElementById("results");
+        // 2. Editor de código
+        let editor;
+        require.config({ paths: { vs: 'https://unpkg.com/monaco-editor@0.45.0/min/vs' }});
+        require(['vs/editor/editor.main'], function () {
+            editor = monaco.editor.create(document.getElementById('editor'), {
+                value: `// Estrategia: Cruce de Medias
+// data = array de velas: {open, high, low, close, time}
+// return 1 = COMPRA, -1 = VENTA, 0 = HOLD
 
-      errEl.style.display = "none";
-      resEl.style.display = "none";
+function strategy(data, i) {
+  if (i < 20) return 0;
 
-      if (!file)              return showError("Selecciona un archivo CSV.");
-      if (maFast >= maSlow)   return showError("La MA rápida debe ser menor que la MA lenta.");
-      if (!capital || capital < 100) return showError("Capital mínimo: $100.");
+  const sma10 = avg(data.slice(i-10, i).map(c => c.close));
+  const sma20 = avg(data.slice(i-20, i).map(c => c.close));
+  const prevSma10 = avg(data.slice(i-11, i-1).map(c => c.close));
+  const prevSma20 = avg(data.slice(i-21, i-1).map(c => c.close));
 
-      btn.disabled = true;
-      btn.textContent = "Ejecutando...";
+  // Cruce alcista
+  if (sma10 > sma20 && prevSma10 <= prevSma20) return 1;
+  // Cruce bajista
+  if (sma10 < sma20 && prevSma10 >= prevSma20) return -1;
 
-      const form = new FormData();
-      form.append("file", file);
-      form.append("capital", capital);
-      form.append("ma_fast", maFast);
-      form.append("ma_slow", maSlow);
+  return 0;
+}
 
-      try {
-        const res = await fetch('https://tradelab-mvp.onrender.com/backtest', {
-  method: 'POST',
-  body: form
-});
-        const data = await res.json();
+function avg(arr) { return arr.reduce((a,b) => a+b, 0) / arr.length; }`,
+                language: 'javascript',
+                theme: 'vs-dark',
+                minimap: { enabled: false },
+                fontSize: 12
+            });
+        });
 
-        if (data.error) return showError(data.error);
+        // 3. Ejecutar Backtest
+        document.getElementById('runBtn').onclick = async () => {
+            const symbol = document.getElementById('symbol').value;
+            const code = editor.getValue();
 
-        document.getElementById("resultsHeader").textContent =
-          `Resultados — MA Crossover ${maFast}/${maSlow}`;
+            document.getElementById('runBtn').textContent = 'Cargando...';
 
-        const pct = data.profit_pct;
-        const pctEl = document.getElementById("profitPct");
-        pctEl.textContent = (pct >= 0 ? "+" : "") + pct.toFixed(2) + "%";
-        pctEl.className = "result-value " + (pct >= 0 ? "positive" : "negative");
+            // CAMBIA ESTA URL por tu API de Render
+            const API_URL = 'https://tu-api-render.onrender.com/backtest';
 
-        document.getElementById("finalCapital").textContent =
-          "$" + data.final_capital.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symbol, code })
+                });
+                const data = await res.json();
 
-        document.getElementById("trades").textContent = data.trades;
+                // Pintar velas
+                candleSeries.setData(data.candles);
 
-        resEl.style.display = "block";
-      } catch (e) {
-        showError("No se pudo conectar al backend. ¿Está corriendo en localhost:8000?");
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "▶ Ejecutar Backtest";
-      }
-    }
+                // Pintar señales
+                const markers = data.signals.map(s => ({
+                    time: s.time,
+                    position: s.signal === 1? 'belowBar' : 'aboveBar',
+                    color: s.signal === 1? '#26a69a' : '#ef5350',
+                    shape: s.signal === 1? 'arrowUp' : 'arrowDown',
+                    text: s.signal === 1? 'BUY' : 'SELL'
+                }));
+                candleSeries.setMarkers(markers);
 
-    function showError(msg) {
-      const el = document.getElementById("error");
-      el.textContent = msg;
-      el.style.display = "block";
-      document.getElementById("runBtn").disabled = false;
-      document.getElementById("runBtn").textContent = "▶ Ejecutar Backtest";
-    }
-  </script>
+                // Métricas
+                document.getElementById('metrics').innerHTML = `
+                    <div class="metric"><div class="metric-label">Win Rate</div><div class="metric-value">${data.metrics.winRate}%</div></div>
+                    <div class="metric"><div class="metric-label">Profit Factor</div><div class="metric-value ${data.metrics.profitFactor > 1? 'green' : 'red'}">${data.metrics.profitFactor}</div></div>
+                    <div class="metric"><div class="metric-label">Total Trades</div><div class="metric-value">${data.metrics.totalTrades}</div></div>
+                    <div class="metric"><div class="metric-label">Net Profit</div><div class="metric-value ${data.metrics.netProfit > 0? 'green' : 'red'}">${data.metrics.netProfit}%</div></div>
+                `;
+
+            } catch(e) {
+                alert('Error: ' + e.message + '\nSi Render estaba dormido, intenta de nuevo en 30 seg.');
+            }
+            document.getElementById('runBtn').textContent = '▶ Ejecutar Backtest';
+        };
+    </script>
 </body>
 </html>
